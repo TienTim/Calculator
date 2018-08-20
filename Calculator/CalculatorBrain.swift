@@ -19,16 +19,12 @@ struct CalculatorBrain {
             return accumulator
         }
     }
+    private var resultIsPending = false
+    private var description = "" { didSet {  print(description) } }
     
     private var accumulator: Double?
-    
-    private var resultIsPending = false
-    
-    private var description = "" {
-        didSet {
-            print(description)
-        }
-    }
+    var variableName = String()
+    private var brainVariables: [String : Double]?
     
     private enum Operation {
         case constant(Double)
@@ -42,7 +38,7 @@ struct CalculatorBrain {
         "e": Operation.constant(M_E),
         "C": Operation.constant(0),
         "√": Operation.unaryOperation({ sqrt($0) }),
-//        "cos": Operation.unaryOperation({ cos($0) }),
+        "cos": Operation.unaryOperation({ cos($0) }),
         "±": Operation.unaryOperation({ -$0 }),
         "+": Operation.binaryOperation({ $0 + $1 }),
         "-": Operation.binaryOperation({ $0 - $1 }),
@@ -53,9 +49,8 @@ struct CalculatorBrain {
     
     mutating func performOperation(_ symbol: String) {
         if let operation = operations[symbol] {
-            if symbol != "=" {
-                description += symbol
-            } else {
+            if symbol == "C" {
+                setOperand(variable: "")
                 description = ""
             }
             switch operation {
@@ -67,9 +62,12 @@ struct CalculatorBrain {
             case .unaryOperation(let function):
                 if accumulator != nil {
                     accumulator = function(accumulator!)
+//                } else if variableName != nil {
+//                    variable = function(variable)
                 }
             case .binaryOperation(let function):
                 if accumulator != nil {
+                    description += symbol
                     pendingBinaryOperation = PendingBinaryOperations(firstOperand: accumulator!, function: function)
                     if !resultIsPending {
                         resultIsPending = true
@@ -77,8 +75,12 @@ struct CalculatorBrain {
                     accumulator = nil
                 }
             case .equal:
+                description = ""
                 performPendingBinaryOperation()
                 resultIsPending = false
+                if result != nil {
+                    description = String(result!)
+                }
             }
         }
     }
@@ -102,7 +104,26 @@ struct CalculatorBrain {
     mutating func setOperand(_ operand: Double) {
         accumulator = operand
         description += "\(operand)"
-    }    
+    }
+    
+    mutating func setOperand(variable named: String) {
+        variableName = named
+        if named == "" {
+            accumulator = nil
+        } else if brainVariables != nil {
+            accumulator = brainVariables![variableName]
+        } else {
+            accumulator = 0
+        }
+        description += named
+    }
+    
+    mutating func evaluate(using variables: Dictionary<String,Double>? = nil) -> (result: Double?, isPending: Bool, description: String) {
+        if variables != nil {
+            brainVariables = variables
+        }
+        return (brainVariables?[variableName], resultIsPending, description)
+    }
     
 }
 

@@ -11,6 +11,8 @@ import UIKit
 class ViewController: UIViewController {
 
     @IBOutlet weak var display: UILabel!
+    @IBOutlet weak var descriptionLabel: UILabel!
+    @IBOutlet weak var memoryLabel: UILabel!
     
     var userIsInTheMiddleOfTyping = false
     
@@ -23,6 +25,7 @@ class ViewController: UIViewController {
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        memoryLabel.isHidden = true
         showSizeClasses()
     }
     
@@ -68,10 +71,44 @@ class ViewController: UIViewController {
         if let result = brain.result {
             displayValue = result
         }
+        let (_, _, description) = brain.evaluate()
+        descriptionLabel.text = description
     }
+    
+    @IBAction func setMemory(_ sender: UIButton) {
+        let number = display.text!
+        brain.variableName = "M"
+        let _ = brain.evaluate(using: ["M" : Double(number)!])
+        let hideMemory = number == "0"
+        memoryLabel.text = number
+        memoryLabel.isHidden = hideMemory
+        userIsInTheMiddleOfTyping = false
+    }
+    
+    @IBAction func callMemory(_ sender: UIButton) {
+        brain.setOperand(variable: brain.variableName)
+        let (result, _, _) = brain.evaluate()
+        if result != nil {
+            displayValue = result!
+        }
+        userIsInTheMiddleOfTyping = false
+    }
+    
+    @IBAction func undo(_ sender: UIButton) {
+        if userIsInTheMiddleOfTyping {
+            var textToDisplay = display.text!
+            textToDisplay.removeLast()
+            display.text = textToDisplay
+        } else {
+            display.text = "0"
+            brain.setOperand(variable: "")
+        }
+    }
+    
 }
 
 extension UIUserInterfaceSizeClass: CustomStringConvertible {
+    
     public var description: String {
         switch self {
         case .compact: return "Compact"
@@ -79,5 +116,6 @@ extension UIUserInterfaceSizeClass: CustomStringConvertible {
         case .unspecified: return "??"
         }
     }
+    
 }
 
